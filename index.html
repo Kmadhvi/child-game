@@ -1,65 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Kids Smart Learning Game</title>
+  <title>Smart Kids Learning Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
-      font-family: Arial;
-      text-align: center;
-      background: linear-gradient(to right, #a1c4fd, #c2e9fb);
       margin: 0;
+      font-family: 'Comic Sans MS', cursive;
+      background: linear-gradient(to bottom, #ffecd2, #fcb69f);
+      text-align: center;
     }
 
-    h1 { margin-top: 20px; }
+    h1 { color: #ff4081; }
 
-    .menu button, .option, .back-btn {
-      font-size: 20px;
-      padding: 12px;
+    .screen { padding: 20px; }
+
+    button {
+      padding: 12px 20px;
       margin: 10px;
-      border-radius: 15px;
+      border-radius: 20px;
       border: none;
+      font-size: 18px;
       cursor: pointer;
+      background: #ff4081;
+      color: white;
     }
-
-    .menu button { background: #ff6f61; color: white; }
-    .back-btn { background: #444; color: white; }
 
     .game { display: none; }
 
     .options {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
     }
 
     .option {
-      width: 120px;
-      height: 120px;
       background: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      font-size: 28px;
-      transition: transform 0.2s;
+      padding: 20px;
+      border-radius: 20px;
+      font-size: 24px;
+      box-shadow: 0 4px #ccc;
     }
 
-    .option:hover { transform: scale(1.2); }
-
-    #score {
-      font-size: 20px;
-      margin: 10px;
-    }
-
-    .correct { color: green; animation: pop 0.4s; }
-    .wrong { color: red; }
+    #score { font-size: 18px; }
 
     #achievement {
-      font-size: 22px;
-      color: purple;
       display: none;
+      color: purple;
+      font-size: 22px;
     }
 
     canvas {
@@ -68,29 +57,35 @@
       left: 0;
       pointer-events: none;
     }
-
-    @keyframes pop {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.4); }
-      100% { transform: scale(1); }
-    }
   </style>
 </head>
 
 <body>
 
-<h1>🎮 Kids Learning Game</h1>
+<!-- MENU -->
+<div class="screen menu">
+  <h1>🎮 Smart Learning</h1>
 
-<div class="menu">
-  <button onclick="startGame('alphabet')">ABC Game</button>
-  <button onclick="startGame('number')">123 Game</button>
+  <h3>Select Mode</h3>
+  <button onclick="setMode('alphabet')">🔤 ABC</button>
+  <button onclick="setMode('number')">🔢 Numbers</button>
+  <button onclick="setMode('words')">📖 Words</button>
+
+  <h3>Select Difficulty</h3>
+  <button onclick="setLevel('easy')">🟢 Easy</button>
+  <button onclick="setLevel('medium')">🟡 Medium</button>
+  <button onclick="setLevel('hard')">🔴 Hard</button>
+
+  <br><br>
+  <button onclick="startGame()">▶ Start</button>
 </div>
 
-<div class="game">
-  <button class="back-btn" onclick="goBack()">⬅ Back</button>
+<!-- GAME -->
+<div class="screen game">
+  <button onclick="goBack()">⬅ Back</button>
+  <div id="score">⭐ 0</div>
   <h2 id="question"></h2>
-  <div id="score">⭐ Score: 0</div>
-  <div id="achievement">🏆 Achievement Unlocked!</div>
+  <div id="achievement">🏆 Champion!</div>
   <div class="options" id="options"></div>
   <p id="result"></p>
 </div>
@@ -98,151 +93,125 @@
 <canvas id="confetti"></canvas>
 
 <script>
+let mode = "", level = "", score = 0, answer = "", unlocked = false;
+
 // DATA
-const alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(l => ({ letter: l, img: "🔤" }));
+const wordsEasy = ["CAT","DOG","SUN","BAT"];
+const wordsHard = ["APPLE","TIGER","HOUSE","MANGO"];
 
-const numbers = Array.from({length:10}, (_,i)=> ({
-  num: (i+1).toString(),
-  img: "⭐".repeat(i+1)
-}));
-
-let mode = "";
-let score = 0;
-let correctAnswer = "";
-let achievementUnlocked = false;
-
-// Voice
-function speak(text) {
+function speak(text){
   let msg = new SpeechSynthesisUtterance(text);
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
 }
 
-// Start
-function startGame(selectedMode) {
-  mode = selectedMode;
+function setMode(m){ mode = m; }
+function setLevel(l){ level = l; }
+
+function startGame(){
+  if(!mode || !level){
+    alert("Select mode and level");
+    return;
+  }
+
   score = 0;
-  achievementUnlocked = false;
+  unlocked = false;
 
   document.querySelector(".menu").style.display = "none";
   document.querySelector(".game").style.display = "block";
   document.getElementById("achievement").style.display = "none";
 
-  loadQuestion();
+  loadQ();
 }
 
-// Back button
-function goBack() {
+function goBack(){
   document.querySelector(".menu").style.display = "block";
   document.querySelector(".game").style.display = "none";
 }
 
-// Shuffle
-function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
-}
+// DATA BASED ON LEVEL
+function getData(){
+  if(mode === "alphabet") return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-// Load Question
-function loadQuestion() {
-  let data = mode === "alphabet" ? alphabets : numbers;
-
-  let randomItem = data[Math.floor(Math.random() * data.length)];
-  correctAnswer = mode === "alphabet" ? randomItem.letter : randomItem.num;
-
-  document.getElementById("question").innerText = "Tap " + correctAnswer;
-  speak("Tap " + correctAnswer);
-
-  let options = shuffle(data).slice(0, 4);
-
-  if (!options.find(o => (mode==="alphabet"?o.letter:o.num) === correctAnswer)) {
-    options[0] = randomItem;
+  if(mode === "number"){
+    return level === "easy"
+      ? Array.from({length:10},(_,i)=>(i+1).toString())
+      : Array.from({length:20},(_,i)=>(i+1).toString());
   }
 
-  let html = "";
-  options.forEach(item => {
-    let value = mode === "alphabet" ? item.letter : item.num;
-    html += `<div class="option" onclick="check('${value}')">
-      <div>${value}</div>
-      <div>${item.img}</div>
-    </div>`;
-  });
+  if(mode === "words"){
+    return level === "easy" ? wordsEasy : wordsHard;
+  }
+}
 
-  document.getElementById("options").innerHTML = html;
+function random(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function loadQ(){
+  let data = getData();
+  answer = random(data);
+
+  document.getElementById("question").innerText = "👉 Tap " + answer;
+  speak(answer);
+
+  let options = [...data].sort(()=>0.5-Math.random()).slice(0,4);
+  if(!options.includes(answer)) options[0] = answer;
+
+  document.getElementById("options").innerHTML =
+    options.map(o=>`<div class="option" onclick="check('${o}')">${o}</div>`).join("");
+
   document.getElementById("result").innerText = "";
 }
 
-// Sound
-function playSound(correct) {
-  let audio = new Audio(correct
-    ? "https://www.soundjay.com/buttons/sounds/button-4.mp3"
-    : "https://www.soundjay.com/buttons/sounds/button-10.mp3"
-  );
-  audio.play();
+function check(val){
+  let result = document.getElementById("result");
+
+  if(val === answer){
+    score++;
+    result.innerText = "🎉 Correct!";
+    document.getElementById("score").innerText = "⭐ " + score;
+
+    if(score >= 15 && !unlocked){
+      unlocked = true;
+      document.getElementById("achievement").style.display = "block";
+      confetti();
+      speak("Great job! You are a champion!");
+    }
+
+    setTimeout(loadQ, 800);
+
+  } else {
+    result.innerText = "❌ Try again!";
+  }
 }
 
-// Confetti 🎉
-function launchConfetti() {
+// CONFETTI
+function confetti(){
   let canvas = document.getElementById("confetti");
   let ctx = canvas.getContext("2d");
 
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  let pieces = Array.from({length:100}, () => ({
+  let pieces = Array.from({length:100},()=>({
     x: Math.random()*canvas.width,
     y: Math.random()*canvas.height,
-    r: Math.random()*6+2,
-    d: Math.random()*50
+    r: Math.random()*6
   }));
 
-  function draw() {
+  let interval = setInterval(()=>{
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    pieces.forEach(p => {
+    pieces.forEach(p=>{
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
       ctx.fill();
+      p.y += 2;
+      if(p.y>canvas.height) p.y=0;
     });
-    update();
-  }
+  },30);
 
-  function update() {
-    pieces.forEach(p => {
-      p.y += Math.cos(p.d) + 1;
-      if(p.y > canvas.height) p.y = 0;
-    });
-  }
-
-  let interval = setInterval(draw, 30);
-  setTimeout(()=>clearInterval(interval), 3000);
-}
-
-// Check
-function check(value) {
-  let result = document.getElementById("result");
-
-  if (value === correctAnswer) {
-    score++;
-    result.innerText = "🎉 Awesome!";
-    result.className = "correct";
-    playSound(true);
-
-    document.getElementById("score").innerText = "⭐ Score: " + score;
-
-    // 🎯 Achievement at 15
-    if (score >= 15 && !achievementUnlocked) {
-      achievementUnlocked = true;
-      document.getElementById("achievement").style.display = "block";
-      launchConfetti();
-      speak("Great job! Achievement unlocked!");
-    }
-
-    setTimeout(loadQuestion, 900);
-
-  } else {
-    result.innerText = "❌ Try Again!";
-    result.className = "wrong";
-    playSound(false);
-  }
+  setTimeout(()=>clearInterval(interval),3000);
 }
 </script>
 
