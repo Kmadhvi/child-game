@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kids Smart Learning Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      background: linear-gradient(to right, #a1c4fd, #c2e9fb);
+      margin: 0;
+    }
+
+    h1 { margin-top: 20px; }
+
+    .menu button, .option {
+      font-size: 22px;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 15px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .menu button {
+      background: #ff6f61;
+      color: white;
+    }
+
+    .game {
+      display: none;
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .option {
+      width: 120px;
+      height: 120px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 28px;
+      transition: transform 0.2s;
+    }
+
+    .option:hover {
+      transform: scale(1.2);
+    }
+
+    #score {
+      font-size: 20px;
+      margin: 10px;
+    }
+
+    .correct {
+      color: green;
+      animation: pop 0.4s;
+    }
+
+    .wrong {
+      color: red;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🎮 Kids Learning Game</h1>
+
+<div class="menu">
+  <button onclick="startGame('alphabet')">ABC Game</button>
+  <button onclick="startGame('number')">123 Game</button>
+</div>
+
+<div class="game">
+  <h2 id="question"></h2>
+  <div id="score">⭐ Score: 0</div>
+  <div class="options" id="options"></div>
+  <p id="result"></p>
+</div>
+
+<script>
+// FULL A-Z DATA
+const alphabets = [
+  { letter: "A", img: "🍎" }, { letter: "B", img: "⚽" },
+  { letter: "C", img: "🐱" }, { letter: "D", img: "🐶" },
+  { letter: "E", img: "🐘" }, { letter: "F", img: "🐟" },
+  { letter: "G", img: "🍇" }, { letter: "H", img: "🏠" },
+  { letter: "I", img: "🍦" }, { letter: "J", img: "🕹️" },
+  { letter: "K", img: "🔑" }, { letter: "L", img: "🦁" },
+  { letter: "M", img: "🐒" }, { letter: "N", img: "👃" },
+  { letter: "O", img: "🐙" }, { letter: "P", img: "🍍" },
+  { letter: "Q", img: "👑" }, { letter: "R", img: "🤖" },
+  { letter: "S", img: "🐍" }, { letter: "T", img: "🐯" },
+  { letter: "U", img: "☂️" }, { letter: "V", img: "🎻" },
+  { letter: "W", img: "⌚" }, { letter: "X", img: "❌" },
+  { letter: "Y", img: "🪀" }, { letter: "Z", img: "🦓" }
+];
+
+// 1–10 NUMBERS
+const numbers = [
+  { num: "1", img: "🍎" },
+  { num: "2", img: "🍌🍌" },
+  { num: "3", img: "🍇🍇🍇" },
+  { num: "4", img: "🍒🍒🍒🍒" },
+  { num: "5", img: "🍓🍓🍓🍓🍓" },
+  { num: "6", img: "🍉🍉🍉🍉🍉🍉" },
+  { num: "7", img: "🍍🍍🍍🍍🍍🍍🍍" },
+  { num: "8", img: "🥝🥝🥝🥝🥝🥝🥝🥝" },
+  { num: "9", img: "🍑🍑🍑🍑🍑🍑🍑🍑🍑" },
+  { num: "10", img: "🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎" }
+];
+
+let mode = "";
+let score = 0;
+let correctAnswer = "";
+
+// Voice
+function speak(text) {
+  let msg = new SpeechSynthesisUtterance(text);
+  speechSynthesis.cancel();
+  speechSynthesis.speak(msg);
+}
+
+// Start
+function startGame(selectedMode) {
+  mode = selectedMode;
+  document.querySelector(".menu").style.display = "none";
+  document.querySelector(".game").style.display = "block";
+  score = 0;
+  loadQuestion();
+}
+
+// Shuffle
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+// Load Question
+function loadQuestion() {
+  let data = mode === "alphabet" ? alphabets : numbers;
+
+  let randomItem = data[Math.floor(Math.random() * data.length)];
+  correctAnswer = mode === "alphabet" ? randomItem.letter : randomItem.num;
+
+  document.getElementById("question").innerText = "Tap " + correctAnswer;
+  speak("Tap " + correctAnswer);
+
+  // Pick 4 random unique options
+  let options = shuffle(data).slice(0, 4);
+
+  // Ensure correct answer is included
+  if (!options.find(o => (mode==="alphabet"?o.letter:o.num) === correctAnswer)) {
+    options[0] = randomItem;
+  }
+
+  let html = "";
+  options.forEach(item => {
+    let value = mode === "alphabet" ? item.letter : item.num;
+
+    html += `
+      <div class="option" onclick="check('${value}')">
+        <div>${value}</div>
+        <div>${item.img}</div>
+      </div>
+    `;
+  });
+
+  document.getElementById("options").innerHTML = html;
+  document.getElementById("result").innerText = "";
+}
+
+// Sound
+function playSound(correct) {
+  let audio = new Audio(correct
+    ? "https://www.soundjay.com/buttons/sounds/button-4.mp3"
+    : "https://www.soundjay.com/buttons/sounds/button-10.mp3"
+  );
+  audio.play();
+}
+
+// Check Answer
+function check(value) {
+  let result = document.getElementById("result");
+
+  if (value === correctAnswer) {
+    score++;
+    result.innerText = "🎉 Awesome!";
+    result.className = "correct";
+    playSound(true);
+
+    document.getElementById("score").innerText = "⭐ Score: " + score;
+
+    setTimeout(loadQuestion, 900);
+  } else {
+    result.innerText = "❌ Try Again!";
+    result.className = "wrong";
+    playSound(false);
+  }
+}
+</script>
+
+</body>
+</html>
