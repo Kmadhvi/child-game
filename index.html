@@ -14,23 +14,19 @@
 
     h1 { margin-top: 20px; }
 
-    .menu button, .option {
-      font-size: 22px;
-      padding: 15px;
+    .menu button, .option, .back-btn {
+      font-size: 20px;
+      padding: 12px;
       margin: 10px;
       border-radius: 15px;
       border: none;
       cursor: pointer;
     }
 
-    .menu button {
-      background: #ff6f61;
-      color: white;
-    }
+    .menu button { background: #ff6f61; color: white; }
+    .back-btn { background: #444; color: white; }
 
-    .game {
-      display: none;
-    }
+    .game { display: none; }
 
     .options {
       display: flex;
@@ -50,22 +46,27 @@
       transition: transform 0.2s;
     }
 
-    .option:hover {
-      transform: scale(1.2);
-    }
+    .option:hover { transform: scale(1.2); }
 
     #score {
       font-size: 20px;
       margin: 10px;
     }
 
-    .correct {
-      color: green;
-      animation: pop 0.4s;
+    .correct { color: green; animation: pop 0.4s; }
+    .wrong { color: red; }
+
+    #achievement {
+      font-size: 22px;
+      color: purple;
+      display: none;
     }
 
-    .wrong {
-      color: red;
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
     }
 
     @keyframes pop {
@@ -86,47 +87,29 @@
 </div>
 
 <div class="game">
+  <button class="back-btn" onclick="goBack()">⬅ Back</button>
   <h2 id="question"></h2>
   <div id="score">⭐ Score: 0</div>
+  <div id="achievement">🏆 Achievement Unlocked!</div>
   <div class="options" id="options"></div>
   <p id="result"></p>
 </div>
 
-<script>
-// FULL A-Z DATA
-const alphabets = [
-  { letter: "A", img: "🍎" }, { letter: "B", img: "⚽" },
-  { letter: "C", img: "🐱" }, { letter: "D", img: "🐶" },
-  { letter: "E", img: "🐘" }, { letter: "F", img: "🐟" },
-  { letter: "G", img: "🍇" }, { letter: "H", img: "🏠" },
-  { letter: "I", img: "🍦" }, { letter: "J", img: "🕹️" },
-  { letter: "K", img: "🔑" }, { letter: "L", img: "🦁" },
-  { letter: "M", img: "🐒" }, { letter: "N", img: "👃" },
-  { letter: "O", img: "🐙" }, { letter: "P", img: "🍍" },
-  { letter: "Q", img: "👑" }, { letter: "R", img: "🤖" },
-  { letter: "S", img: "🐍" }, { letter: "T", img: "🐯" },
-  { letter: "U", img: "☂️" }, { letter: "V", img: "🎻" },
-  { letter: "W", img: "⌚" }, { letter: "X", img: "❌" },
-  { letter: "Y", img: "🪀" }, { letter: "Z", img: "🦓" }
-];
+<canvas id="confetti"></canvas>
 
-// 1–10 NUMBERS
-const numbers = [
-  { num: "1", img: "🍎" },
-  { num: "2", img: "🍌🍌" },
-  { num: "3", img: "🍇🍇🍇" },
-  { num: "4", img: "🍒🍒🍒🍒" },
-  { num: "5", img: "🍓🍓🍓🍓🍓" },
-  { num: "6", img: "🍉🍉🍉🍉🍉🍉" },
-  { num: "7", img: "🍍🍍🍍🍍🍍🍍🍍" },
-  { num: "8", img: "🥝🥝🥝🥝🥝🥝🥝🥝" },
-  { num: "9", img: "🍑🍑🍑🍑🍑🍑🍑🍑🍑" },
-  { num: "10", img: "🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎" }
-];
+<script>
+// DATA
+const alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(l => ({ letter: l, img: "🔤" }));
+
+const numbers = Array.from({length:10}, (_,i)=> ({
+  num: (i+1).toString(),
+  img: "⭐".repeat(i+1)
+}));
 
 let mode = "";
 let score = 0;
 let correctAnswer = "";
+let achievementUnlocked = false;
 
 // Voice
 function speak(text) {
@@ -138,10 +121,20 @@ function speak(text) {
 // Start
 function startGame(selectedMode) {
   mode = selectedMode;
+  score = 0;
+  achievementUnlocked = false;
+
   document.querySelector(".menu").style.display = "none";
   document.querySelector(".game").style.display = "block";
-  score = 0;
+  document.getElementById("achievement").style.display = "none";
+
   loadQuestion();
+}
+
+// Back button
+function goBack() {
+  document.querySelector(".menu").style.display = "block";
+  document.querySelector(".game").style.display = "none";
 }
 
 // Shuffle
@@ -159,10 +152,8 @@ function loadQuestion() {
   document.getElementById("question").innerText = "Tap " + correctAnswer;
   speak("Tap " + correctAnswer);
 
-  // Pick 4 random unique options
   let options = shuffle(data).slice(0, 4);
 
-  // Ensure correct answer is included
   if (!options.find(o => (mode==="alphabet"?o.letter:o.num) === correctAnswer)) {
     options[0] = randomItem;
   }
@@ -170,13 +161,10 @@ function loadQuestion() {
   let html = "";
   options.forEach(item => {
     let value = mode === "alphabet" ? item.letter : item.num;
-
-    html += `
-      <div class="option" onclick="check('${value}')">
-        <div>${value}</div>
-        <div>${item.img}</div>
-      </div>
-    `;
+    html += `<div class="option" onclick="check('${value}')">
+      <div>${value}</div>
+      <div>${item.img}</div>
+    </div>`;
   });
 
   document.getElementById("options").innerHTML = html;
@@ -192,7 +180,43 @@ function playSound(correct) {
   audio.play();
 }
 
-// Check Answer
+// Confetti 🎉
+function launchConfetti() {
+  let canvas = document.getElementById("confetti");
+  let ctx = canvas.getContext("2d");
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  let pieces = Array.from({length:100}, () => ({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    r: Math.random()*6+2,
+    d: Math.random()*50
+  }));
+
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+    update();
+  }
+
+  function update() {
+    pieces.forEach(p => {
+      p.y += Math.cos(p.d) + 1;
+      if(p.y > canvas.height) p.y = 0;
+    });
+  }
+
+  let interval = setInterval(draw, 30);
+  setTimeout(()=>clearInterval(interval), 3000);
+}
+
+// Check
 function check(value) {
   let result = document.getElementById("result");
 
@@ -204,7 +228,16 @@ function check(value) {
 
     document.getElementById("score").innerText = "⭐ Score: " + score;
 
+    // 🎯 Achievement at 15
+    if (score >= 15 && !achievementUnlocked) {
+      achievementUnlocked = true;
+      document.getElementById("achievement").style.display = "block";
+      launchConfetti();
+      speak("Great job! Achievement unlocked!");
+    }
+
     setTimeout(loadQuestion, 900);
+
   } else {
     result.innerText = "❌ Try Again!";
     result.className = "wrong";
